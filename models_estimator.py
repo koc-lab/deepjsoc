@@ -1,6 +1,6 @@
 """
-This code and some of the related codes uses original DeepSC implementation from:
-    https://github.com/13274086/DeepSC
+ This code and some of the related codes here are inspired from: 
+     https://github.com/Bilkent-CTAR-Lab/DNN-for-Deletion-Channel
 """
 import torch
 import torch.nn as nn
