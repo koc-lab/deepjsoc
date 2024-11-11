@@ -1,8 +1,12 @@
+"""
+This code and some of the related codes uses original DeepSC implementation from:
+    https://github.com/13274086/DeepSC
+"""
 import torch
 import torch.nn as nn
 
 class BI_Estimator(nn.Module):
-    def __init__(self, input_size,actual_size, d_rnn=512, d_mlp=[128, 32], num_bi_layers=3, rnn_type='gru'):
+    def __init__(self, input_size,actual_size, d_rnn=512, d_mlp=[128, 32], num_bi_layers=3):
 
         super(BI_Estimator, self).__init__()
 
@@ -10,18 +14,9 @@ class BI_Estimator(nn.Module):
         self.actual_size = actual_size
         self.num_bi_layers = num_bi_layers
         self.d_rnn = d_rnn
-        self.rnn_type = rnn_type
         self.d_mlp = d_mlp
-
-        # BI-RNN layers
-        if self.rnn_type == 'lstm':
-            self.bir_layers = nn.ModuleList([nn.LSTM(input_size if i == 0 else self.d_rnn * 2, self.d_rnn, bidirectional=True, batch_first=True)
+        self.bir_layers = nn.ModuleList([nn.GRU(input_size if i == 0 else self.d_rnn * 2, self.d_rnn, bidirectional=True, batch_first=True)
                                              for i in range(self.num_bi_layers)])
-        elif self.rnn_type == 'gru':
-            self.bir_layers = nn.ModuleList([nn.GRU(input_size if i == 0 else self.d_rnn * 2, self.d_rnn, bidirectional=True, batch_first=True)
-                                             for i in range(self.num_bi_layers)])
-        else:
-            raise ValueError('RNN type must be either gru or lstm!')
 
         # Layer normalization layers
         self.nor_layers = nn.ModuleList([nn.LayerNorm(self.d_rnn * 2,eps=1e-3) for _ in range(self.num_bi_layers)])
