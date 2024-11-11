@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 from torch.utils.data import DataLoader, TensorDataset
 import os 
 import time
@@ -11,25 +12,21 @@ from training_utils_estimator import create_batch,insert_regular_markers
 from models_estimator import BI_Estimator
 from scipy.optimize import minimize
 parser = argparse.ArgumentParser(description='IDS Channel Training')
-
-parser.add_argument('--path', default='BI_GRU_ESTIMATOR', type=str, help='Saving directory of the trained model.')
-parser.add_argument('--training_Pd', default=[0.05], type=list, help='Specify the training deletion probabilities (list)')
-parser.add_argument('--training_Ps', default=[0.05], type=list, help='Specify the training substitution probabilities (list)')
-parser.add_argument('--training_Pi', default=[0.05], type=list, help='Specify the training deletion probabilities (list)')
+parser.add_argument('--training_Pd', default=0.04, type=float, help='Specify the training probabilities as uniform(0,Pd)')
+parser.add_argument('--training_Ps', default=0.05, type=float, help='Specify the training probabilities as uniform(0,Ps)')
+parser.add_argument('--training_Pi', default=0.04, type=float, help='Specify the training probabilities as uniform(0,Pi)')
 parser.add_argument('--marker_sequence', default=np.array([0, 1]).reshape(1, -1), type=np.array, help='Specify the marker sequence.')
-parser.add_argument('--loss', choices=['mse', 'bce'], default='bce', type=str, help='Specify the loss function')
-parser.add_argument('--epochs', default=1000, type=int, help='Number of total epochs to run')
+parser.add_argument('--epochs', default=200, type=int, help='Number of total epochs to run')
 parser.add_argument('--step', default=100, type=int, help='Number of steps per epoch')
 parser.add_argument('--bs', default=16, type=int, help='Mini-batch size')
 parser.add_argument('--lr', default=9e-4, type=float, help='Initial learning rate')
 parser.add_argument('--d_rnn', default=128, type=int, help='Hidden size dimension of bi-rnn')
 parser.add_argument('--mlp', default=[128, 32], type=list, help='Dimensions of MLP added on top of bi-rnn.')
-parser.add_argument('--rnn_type', default='gru', choices=['gru', 'lstm'], type=str, help='Type of rnn.')
 parser.add_argument('--n_rnn', default=3, type=int, help='Number of bi-rnn layers')
 parser.add_argument('--wd', '--weight-decay', default=5e-4, type=float, metavar='W', help='weight decay (default: 1e-4)', dest='weight_decay')
 parser.add_argument('--seed', default=1000, type=int, help='seed for initializing training.')
-parser.add_argument('--channel_bits', default = 24, type=int,help='sequence length')
-parser.add_argument('--Nc', default = 6, type=int,help='marker frequency')
+parser.add_argument('--channel_bits', default = 36, type=int,help='sequence length')
+parser.add_argument('--Nc', default = 9, type=int,help='marker frequency')
 parser.add_argument('--max_pi',default = 0.05,type=float)
 parser.add_argument('--max_pd',default = 0.05,type=float)
 
@@ -59,7 +56,6 @@ def get_safety_bits(pi_range, pd_range, bits):
         if -result.fun > max_value:
             max_value = -result.fun  # Store the actual maximum value
             max_point = result.x  # Store the point at which it occurs
-
     return int(np.ceil(max_value))
 
 def init_weights(m):
@@ -115,11 +111,8 @@ def main():
     ex_seq,_ = insert_regular_markers(np.random.randint(0,2,size=(1,channel_bits)),Nc,marker_sequence)
     safety_bits = get_safety_bits(pi_range,pd_range,ex_seq.shape[1])
     # Define the estimator model
-    model = BI_Estimator(input_size=safety_bits,actual_size=ex_seq.shape[1], d_rnn=args.d_rnn, d_mlp=args.mlp, num_bi_layers=args.n_rnn, rnn_type=args.rnn_type)
-    if args.loss == 'mse':
-        loss_fn = nn.MSELoss()
-    elif args.loss == 'bce':
-        loss_fn = nn.BCELoss(reduction = 'mean')
+    model = BI_Estimator(input_size=safety_bits,actual_size=ex_seq.shape[1], d_rnn=args.d_rnn, d_mlp=args.mlp, num_bi_layers=args.n_rnn)
+    loss_fn = nn.BCELoss(reduction = 'mean')
     optimizer = optim.Adam(model.parameters(), lr=args.lr,eps=1e-7)
     # Set optimizer with the lr specified!
     
