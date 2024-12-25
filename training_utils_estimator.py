@@ -3,6 +3,7 @@ from numba import njit
 @njit
 def ins_del_channel(x,pd,pi,ps,safety_bits):
     new_array = np.zeros((x.shape[0],safety_bits))
+    ps_effective = (1-pi-pd)*ps
     for j in range(x.shape[0]):
         curr=0
         for k in range(x.shape[1]):
@@ -13,10 +14,10 @@ def ins_del_channel(x,pd,pi,ps,safety_bits):
                 p = np.random.rand(1)
                 #print(p)
             else:
-                if pi+pd<p and p<pi+pd+ps:
+                if pi+pd<p and p<pi+pd+ps_effective:
                     new_array[j,curr] = -x[j,k]+ 1
                     curr += 1
-                elif pi+pd+ps<p:
+                elif pi+pd+ps_effective<p:
                     new_array[j,curr] = x[j,k] 
                     curr += 1
     return new_array,new_array
